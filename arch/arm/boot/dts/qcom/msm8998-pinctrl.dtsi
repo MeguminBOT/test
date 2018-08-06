@@ -2090,7 +2090,7 @@
 
 			config {
 				pins = "gpio95";
-				bias-disable;           /* no pull */
+				bias-pull-up;           /* pull up */
 				drive-strength = <2>;   /* 2 MA */
 			};
 		};
@@ -2103,7 +2103,7 @@
 
 			config {
 				pins = "gpio95";
-				bias-disable;           /* no pull */
+				bias-pull-up;           /* pull up */
 				drive-strength = <2>;   /* 2 MA */
 			};
 
@@ -3357,6 +3357,18 @@
 				pins = "gpio86";
 				bias-pull-up;           /* pull up */
 				drive-strength = <2>;   /* 2 MA */
+			};
+		};
+
+		ir_int: ir_int {
+			mux {
+				pins = "gpio120";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio120";
+				drive-strength = <6>;   /* 5 mA */
+				bias-pull-up;           /* NO PULL */
 			};
 		};
 	};

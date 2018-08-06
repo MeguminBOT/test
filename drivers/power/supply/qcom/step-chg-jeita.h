@@ -12,8 +12,6 @@
 
 #ifndef __STEP_CHG_H__
 #define __STEP_CHG_H__
-/* WayneWCShiue - 9802-799 - Implement the WLC FCC adjust mechansim */
-int qcom_step_chg_init(bool, bool, bool);
-/* end 9802-799 */
+int qcom_step_chg_init(bool, bool);
 void qcom_step_chg_deinit(void);
 #endif /* __STEP_CHG_H__ */

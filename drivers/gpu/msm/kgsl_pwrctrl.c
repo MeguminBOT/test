@@ -43,13 +43,6 @@
 
 #define DEFAULT_BUS_P 25
 
-/*
- * The effective duration of qos request in usecs. After
- * timeout, qos request is cancelled automatically.
- * Kept 80ms default, inline with default GPU idle time.
- */
-#define KGSL_L2PC_CPU_TIMEOUT	(80 * 1000)
-
 /* Order deeply matters here because reasons. New entries go on the end */
 static const char * const clocks[] = {
 	"src_clk",
@@ -520,12 +513,14 @@ EXPORT_SYMBOL(kgsl_pwrctrl_set_constraint);
 /**
  * kgsl_pwrctrl_update_l2pc() - Update existing qos request
  * @device: Pointer to the kgsl_device struct
+ * @timeout_us: the effective duration of qos request in usecs.
  *
  * Updates an existing qos request to avoid L2PC on the
  * CPUs (which are selected through dtsi) on which GPU
  * thread is running. This would help for performance.
  */
-void kgsl_pwrctrl_update_l2pc(struct kgsl_device *device)
+void kgsl_pwrctrl_update_l2pc(struct kgsl_device *device,
+			unsigned long timeout_us)
 {
 	int cpu;
 
@@ -539,7 +534,7 @@ void kgsl_pwrctrl_update_l2pc(struct kgsl_device *device)
 		pm_qos_update_request_timeout(
 				&device->pwrctrl.l2pc_cpus_qos,
 				device->pwrctrl.pm_qos_cpu_mask_latency,
-				KGSL_L2PC_CPU_TIMEOUT);
+				timeout_us);
 	}
 }
 EXPORT_SYMBOL(kgsl_pwrctrl_update_l2pc);
@@ -2201,6 +2196,10 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 	kgsl_property_read_u32(device, "qcom,l2pc-cpu-mask",
 			&pwr->l2pc_cpus_mask);
 
+	pwr->l2pc_update_queue = of_property_read_bool(
+				device->pdev->dev.of_node,
+				"qcom,l2pc-update-queue");
+
 	pm_runtime_enable(&pdev->dev);
 
 	ocmem_bus_node = of_find_node_by_name(
@@ -2781,9 +2780,8 @@ static int _suspend(struct kgsl_device *device)
 {
 	int ret = 0;
 
-	if ((device->state == KGSL_STATE_NONE) ||
-			(device->state == KGSL_STATE_INIT) ||
-			(device->state == KGSL_STATE_SUSPEND))
+	if ((KGSL_STATE_NONE == device->state) ||
+			(KGSL_STATE_INIT == device->state))
 		return ret;
 
 	/* drain to prevent from more commands being submitted */
@@ -3177,24 +3175,3 @@ unsigned int kgsl_pwr_limits_get_freq(enum kgsl_deviceid id)
 	return freq;
 }
 EXPORT_SYMBOL(kgsl_pwr_limits_get_freq);
-
-#ifdef CONFIG_FIH_CPU_USAGE
-void kgsl_pwr_quick_get_infos(unsigned int *min, unsigned int *max, unsigned *curr)
-{
-	struct kgsl_device *device = kgsl_get_device(KGSL_DEVICE_3D0);
-	struct kgsl_pwrctrl *pwr;
-
-	if (IS_ERR_OR_NULL(device))
-		return;
-	pwr = &device->pwrctrl;
-//	mutex_lock(&device->mutex);
-	if (min)
-		*min = pwr->pwrlevels[pwr->min_pwrlevel].gpu_freq / 1000000;
-	if (max)
-		*max = pwr->pwrlevels[pwr->max_pwrlevel].gpu_freq / 1000000;
-	if (curr)
-		*curr= pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq / 1000000;
-//	mutex_unlock(&device->mutex);
-}
-EXPORT_SYMBOL(kgsl_pwr_quick_get_infos);
-#endif
